@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nomad Genetics | Seguimiento médico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-role="medico">
+  <div class="page-shell viewer-shell">
+    <header class="hero viewer-hero compact-hero">
+      <div class="hero-overlay"></div>
+      <div class="hero-brand">
+        <div class="brand-mark">
+          <img src="logo.png" alt="Nomad Genetics" class="logo" />
+        </div>
+        <div class="hero-text">
+          <p class="eyebrow">Consulta médica</p>
+          <h1>Seguimiento médico del caso</h1>
+          <p class="hero-copy">Vista con mayor detalle operativo y clínico del avance registrado.</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-grid single-column-grid">
+      <section class="panel viewer-search-panel">
+        <div class="section-head">
+          <div>
+            <h2>Buscar seguimiento</h2>
+            <p>Código activo: <strong id="currentCode">—</strong></p>
+          </div>
+        </div>
+        <div class="viewer-search-row">
+          <input id="searchCode" class="search viewer-search" type="search" placeholder="Ej. NG-2026-001 o 02-2026-00048144">
+          <button id="searchBtn" class="btn primary" type="button">Consultar</button>
+        </div>
+      </section>
+      <div id="result"><div class="empty-message">Escribe tu dato de búsqueda para ver el avance.</div></div>
+    </main>
+  </div>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>
