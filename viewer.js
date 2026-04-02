@@ -119,20 +119,24 @@ function findRecord(records, term){
 
 function renderTimeline(stages = []){
   const currentIndex = currentStageIndex(stages);
-  const fill = stages.length > 1 ? ((Math.max(stages.filter(s => s.status && s.status !== 'cancelada').length - 1, 0)) / (stages.length - 1)) * 100 : 0;
+  const completedCount = stages.filter(s => s.status && s.status !== 'cancelada').length;
+  const fill = stages.length > 1 ? ((Math.max(completedCount - 1, 0)) / (stages.length - 1)) * 100 : 0;
   return `
-    <div class="flow-track viewer-track" style="--steps:${stages.length}">
-      ${stages.map((stage, index) => `
-        <article class="flow-step ${stageState(stage, currentIndex, index)}">
-          <div class="flow-step-icon-wrap"><span class="flow-step-icon">${STAGE_ICONS[stage.id] || '•'}</span></div>
-          <span class="flow-step-index">Paso ${index + 1}</span>
-          <h4 class="flow-step-title">${escapeHtml(stage.title || '')}</h4>
-          <p class="flow-step-sub">${escapeHtml(stage.desc || '')}</p>
-          <span class="flow-step-status-label">${escapeHtml(statusLabel(stage.status))}</span>
-          <span class="flow-dot"></span>
-        </article>
-      `).join('')}
-      <div class="flow-line"><div class="flow-line-fill" style="width:${fill}%"></div></div>
+    <div class="timeline-shell">
+      <div class="timeline-mobile-note">En celular puedes tocar cada paso para acercarlo y ver el avance.</div>
+      <div class="flow-track viewer-track interactive-track" style="--steps:${stages.length}; --fill:${fill}%" data-current-index="${currentIndex}">
+        ${stages.map((stage, index) => `
+          <article class="flow-step ${stageState(stage, currentIndex, index)} ${index === currentIndex ? 'is-focus' : ''}" data-step-index="${index}" tabindex="0">
+            <div class="flow-step-icon-wrap"><span class="flow-step-icon">${STAGE_ICONS[stage.id] || '•'}</span></div>
+            <span class="flow-step-index">Paso ${index + 1}</span>
+            <h4 class="flow-step-title">${escapeHtml(stage.title || '')}</h4>
+            <p class="flow-step-sub">${escapeHtml(stage.desc || '')}</p>
+            <span class="flow-step-status-label">${escapeHtml(statusLabel(stage.status))}</span>
+            <span class="flow-dot"></span>
+          </article>
+        `).join('')}
+        <div class="flow-line"><div class="flow-line-fill" style="width:${fill}%"></div></div>
+      </div>
     </div>`;
 }
 
@@ -163,17 +167,6 @@ function renderPublic(record){
 }
 
 function renderMedico(record){
-  const stageHistory = (record.stages || []).map(stage => `
-    <article class="med-stage-card">
-      <div class="med-stage-top">
-        <strong>${escapeHtml(stage.title || '')}</strong>
-        <span class="tag soft-tag">${escapeHtml(statusLabel(stage.status))}</span>
-      </div>
-      <p class="med-stage-meta">${stage.date ? `Fecha: ${formatDate(stage.date)}` : 'Sin fecha'}${stage.owner ? ` · Responsable: ${escapeHtml(stage.owner)}` : ''}</p>
-      ${stage.comment ? `<div class="history-comment">${escapeHtml(stage.comment)}</div>` : '<div class="history-comment muted">Sin comentario registrado.</div>'}
-    </article>
-  `).join('');
-
   els.result.innerHTML = `
     <div class="viewer-summary-card medico-grid">
       <div><p class="viewer-label">Código / folio</p><strong>${escapeHtml(normalizedCode(record) || 'Sin código')}</strong></div>
@@ -188,10 +181,6 @@ function renderMedico(record){
     <section class="panel viewer-panel">
       <div class="section-head"><div><h2>Avance del caso</h2><p>Vista médico con mayor detalle del seguimiento.</p></div></div>
       ${renderTimeline(record.stages || [])}
-    </section>
-    <section class="panel viewer-panel">
-      <div class="section-head"><div><h2>Detalle por etapa</h2><p>Comentarios y movimientos registrados por KAM.</p></div></div>
-      <div class="med-stage-list">${stageHistory}</div>
     </section>`;
 }
 
@@ -242,6 +231,39 @@ function renderKam(record){
     </section>`;
 }
 
+
+function centerTimelineStep(track, index){
+  if (!track) return;
+  const steps = Array.from(track.querySelectorAll('.flow-step'));
+  const target = steps[index];
+  if (!target) return;
+  steps.forEach((step, i) => step.classList.toggle('is-focus', i === index));
+  if (window.innerWidth <= 768) {
+    const left = target.offsetLeft - ((track.clientWidth - target.clientWidth) / 2);
+    track.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }
+}
+
+function initInteractiveTimelines(){
+  const tracks = Array.from(document.querySelectorAll('.interactive-track'));
+  tracks.forEach(track => {
+    const current = Number(track.dataset.currentIndex || 0);
+    const steps = Array.from(track.querySelectorAll('.flow-step'));
+    steps.forEach((step, index) => {
+      const activate = () => centerTimelineStep(track, index);
+      step.addEventListener('click', activate);
+      step.addEventListener('focus', activate);
+      step.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activate();
+        }
+      });
+    });
+    requestAnimationFrame(() => centerTimelineStep(track, current));
+  });
+}
+
 async function searchAndRender(term){
   const searchTerm = term.trim();
   if (!searchTerm){
@@ -260,6 +282,7 @@ async function searchAndRender(term){
     if (role === 'medico') renderMedico(record);
     else if (role === 'kam') renderKam(record);
     else renderPublic(record);
+    initInteractiveTimelines();
   } catch (error) {
     console.error(error);
     els.result.innerHTML = '<div class="empty-message">No se pudo consultar Firebase. Revisa reglas y conexión.</div>';
