@@ -85,15 +85,23 @@ function statusLabel(value){
   return STATUS_LABELS[value] || 'Pendiente';
 }
 
+const IN_PROGRESS_STATUSES = ['en_revision', 'en_transito', 'enviada', 'retraso_aduana', 'en_curso', 'nueva_muestra'];
+
 function currentStageIndex(stages = []){
-  const doneCount = stages.filter(s => s.status && s.status !== 'cancelada').length;
-  return Math.min(doneCount, Math.max(stages.length - 1, 0));
+  let currentIndex = 0;
+  stages.forEach((s, i) => {
+    if (s?.status && s.status !== 'cancelada') {
+      currentIndex = IN_PROGRESS_STATUSES.includes(s.status) ? i : Math.min(i + 1, stages.length - 1);
+    }
+  });
+  return currentIndex;
 }
 
 function stageState(stage, currentIndex, index){
-  if (stage.status === 'cancelada') return 'cancelled';
-  if (stage.status) return 'done';
-  return index === currentIndex ? 'current' : 'pending';
+  if (stage?.status === 'cancelada') return 'cancelled';
+  if (index === currentIndex) return 'current';
+  if (stage?.status) return 'done';
+  return 'pending';
 }
 
 function normalizedCode(record){
@@ -119,8 +127,7 @@ function findRecord(records, term){
 
 function renderTimeline(stages = []){
   const currentIndex = currentStageIndex(stages);
-  const completedCount = stages.filter(s => s.status && s.status !== 'cancelada').length;
-  const fill = stages.length > 1 ? ((Math.max(completedCount - 1, 0)) / (stages.length - 1)) * 100 : 0;
+  const fill = stages.length > 1 ? (currentIndex / (stages.length - 1)) * 100 : 0;
   return `
     <div class="timeline-shell">
       <div class="timeline-mobile-note">En celular puedes tocar cada paso para acercarlo y ver el avance.</div>
